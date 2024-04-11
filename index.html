@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dieta</title>
+  <!-- Adicionando Vue.js via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+  <!-- Adicionando Tailwind CSS via CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <style>
+    .voltar {
+      cursor: pointer;
+      font-size: 24px;
+    }
+    .inicio {
+      font-size: 24px;
+    }
+    .max-w-50-percent {
+      max-width: 50%;
+    }
+  </style>
+</head>
+<body class="bg-gray-100 p-8">
+  <div id="app" class="max-w-xl mx-auto">
+    <!-- Botão para voltar uma etapa -->
+    <div class="voltar mb-4" @click="voltarEtapa" v-if="etapa !== 'horarios'">
+      &#8592; Voltar
+    </div>
+    <div class="inicio mb-4" v-else>
+      &#8962; Início
+    </div>
+
+    <!-- Campo de pesquisa -->
+    <div class="mb-4">
+      <input type="text" placeholder="Pesquisar item..." v-model="termoPesquisa" @input="buscarPratosPorItem" class="w-full py-2 px-4 rounded-lg border-gray-300 focus:outline-none focus:border-blue-500">
+    </div>
+
+    <!-- Tela de resultado da pesquisa -->
+    <div v-if="etapa === 'resultadoPesquisa'" class="bg-white rounded-lg shadow-lg p-4 mb-4">
+      <h2 class="text-xl font-semibold">Resultado da Pesquisa</h2>
+      <template v-if="pratosEncontrados.length > 0">
+        <ul class="text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+          <li v-for="(prato, index) in pratosEncontrados" :key="index" class="w-full px-4 py-2 border-b border-gray-200 dark:border-gray-600">
+            <h3 @click="selecionarPrato(prato)" class="text-lg font-semibold cursor-pointer text-blue-500 hover:underline">{{ prato.horario.descricao }} - {{ prato.opcao }}</h3>
+            <template v-for="item in prato.itensEncontrados">
+              <div :key="item.descricao" class="flex justify-between items-center">
+                <div v-html="highlightSearchTerm(item.descricao)"></div>
+                <div class="ml-auto max-w-50-percent">{{ item.unidade }}</div>
+              </div>
+            </template>
+          </li>
+        </ul>
+      </template>
+      <div v-else>Nenhum item com essa descrição</div>
+    </div>
+
+    <!-- Tela de seleção de horário -->
+    <div v-else-if="etapa === 'horarios'" class="bg-white rounded-lg shadow-lg p-4 mb-4">
+      <h2 class="text-xl font-semibold">Horário</h2>
+      <ul>
+        <li v-for="horario in horarios" :key="horario.id" @click="selecionarHorario(horario)" class="cursor-pointer text-blue-500 hover:underline">
+          {{ horario.descricao }}
+        </li>
+      </ul>
+    </div>
+
+    <!-- Tela de seleção de opções de pratos -->
+    <div v-else-if="etapa === 'opcoesPratos'" class="bg-white rounded-lg shadow-lg p-4 mb-4">
+      <h2 class="text-xl font-semibold">{{ horarioSelecionado.descricao }}</h2>
+      <ul>
+        <li v-for="opcao in opcoesPratosFiltradas" :key="opcao.id" @click="selecionarOpcao(opcao)" class="cursor-pointer text-blue-500 hover:underline">
+          {{ opcao.opcao }}
+        </li>
+      </ul>
+    </div>
+
+    <!-- Tela de detalhes do prato selecionado -->
+    <div v-else-if="etapa === 'detalhesPrato'" class="bg-white rounded-lg shadow-lg p-4 mb-4">
+      <h2 class="text-xl font-semibold">{{ horarioSelecionado.descricao }} - {{ pratoSelecionado.opcao }}</h2>
+      <div v-for="(itens, tipo) in itensAgrupados" :key="tipo" class="mb-4">
+        <h3 class="text-lg font-semibold mt-2">{{ tipo }}</h3>
+        <ul class="text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+          <li v-for="(item, index) in itens" :key="index" class="w-full px-4 py-2 border-b border-gray-200 dark:border-gray-600 flex justify-between items-center">
+            <div>{{ item.descricao }}</div>
+            <div class="ml-auto max-w-50-percent">{{ item.unidade }}</div>
+          </li>
+        </ul>
+      </div>
+      <div v-if="pratoSelecionado.observacoes !== '' && pratoSelecionado.observacoes !== undefined" class="bg-yellow-100 text-yellow-800 text-xs font-medium me-2 px-2.5 py-0.5 rounded dark:bg-gray-700 dark:text-yellow-300 border border-yellow-300">{{ pratoSelecionado.observacoes }}</div>
+    </div>
+  </div>
+
+  <script>
+    new Vue({
+      el: '#app',
+      data: {
+        // Dados de exemplo (você pode substituir com os dados reais do Firebase)
+        horarios: [
+          { id: 1, descricao: 'Começar o dia' },
+          { id: 2, descricao: 'Café da manhã' },
+          { id: 3, descricao: 'Lanche da manhã' },
+          { id: 4, descricao: 'Almoço' },
+          { id: 5, descricao: 'Lanche da tarde' },
+          { id: 6, descricao: 'Jantar' }
+        ],
+        pratos: [
+          { 
+            id: 1, 
+            horarioId: 1, 
+            opcao: 'Opção 1', 
+            itens: [
+              { tipo: 'Bebida', descricao: 'Limão', unidade: '1 unidade espremida' },
+              { tipo: 'Bebida', descricao: 'Cúrcuma em pó', unidade: '1 pitada' },
+              { tipo: 'Bebida', descricao: 'Gengibre em pó', unidade: '1 pitada' },
+              { tipo: 'Bebida', descricao: 'Vinagre de maçã', unidade: '1 colher sobremesa' },
+              { tipo: 'Bebida', descricao: 'Extrato de própolis alcoólico', unidade: '25 gotas' }
+            ]
+          },
+          { 
+            id: 2, 
+            horarioId: 2, 
+            opcao: 'Opção 1',
+            observacoes: 'Escolher uma das bebidas apenas.',
+            itens: [
+              { 
+                tipo: 'Alimento', 
+                descricao: 'Ovo mexido/cozido', 
+                unidade: '1 inteiro + 1 clara' 
+              },
+              { 
+                tipo: 'Alimento', 
+                descricao: 'Pão integral', 
+                unidade: '1 fatia e meia' 
+              },
+              { 
+                tipo: 'Bebida', 
+                descricao: 'Suco verde', 
+                unidade: '1 folha de couve + 1 fatia de abacaxi + rodela de gengibre + hortelã fresca + pepino + água' 
+              },
+              { 
+                tipo: 'Bebida', 
+                descricao: 'Suco de melancia', 
+                unidade: 'Melancia 200g + 10 folhas de salsa + água' 
+              },
+              { 
+                tipo: 'Bebida', 
+                descricao: 'Suco de maçã', 
+                unidade: 'água de coco 250ml + 1/2 maçã verde ou vermelha + rodela de gengibre + pepino + hortelã' 
+              }
+            ]
+          },
+          { 
+            id: 3, 
+            horarioId: 2, 
+            opcao: 'Opção 2', 
+            observacoes: 'Modo de preparo: Bata o ovo com a tapioca, leve na frigideira e deixe dourar os dois lados. Recheie com queijo e orégano.',
+            itens: [
+              { 
+                tipo: 'Alimento', 
+                descricao: 'Goma de tapioca', 
+                unidade: '20g' 
+              },
+              { 
+                tipo: 'Alimento', 
+                descricao: 'Ovo', 
+                unidade: '1 inteiro' 
+              },
+              { 
+                tipo: 'Alimento', 
+                descricao: 'Queijo mussarela', 
+                unidade: '20g' 
+              },
+              { 
+                tipo: 'Alimento', 
+                descricao: 'Mamão', 
+                unidade: '100g' 
+              },
+              { 
+                tipo: 'Bebida', 
+                descricao: 'Café sem açúcar', 
+                unidade: 'à vontade' 
+              }
+            ]
+          },
+          {
+            id: 4, 
+            horarioId: 3, 
+            opcao: 'Opção 1', 
+            itens: [
+                { 
+                  tipo: 'Alimento', 
+                  descricao: 'Leite de vaca desnatado', 
+                  unidade: '170ml' 
+                },
+                { 
+                  tipo: 'Alimento', 
+                  descricao: 'Morango', 
+                  unidade: '180g' 
+                }
+            ],
+            observacoes: 'Modo de preparo: Bater todos os ingredientes com bastante gelo por 2 minutos.'
+          },
+          { 
+            id: 5, 
+            horarioId: 3, 
+            opcao: 'Opção 2', 
+            itens: [
+                { 
+                    tipo: 'Alimento', 
+                    descricao: 'Chá (digestivo ou diurético)', 
+                    unidade: '30g' 
+                },
+                { 
+                    tipo: 'Alimento', 
+                    descricao: 'Banana prata', 
+                    unidade: '1 fatia' 
+                },
+                { 
+                    tipo: 'Alimento', 
+                    descricao: 'Queijo mussarela', 
+                    unidade: '15g' 
+                }
+            ],
+            observacoes: 'Modo de preparo: Coloque o queijo e a banana por cima do pão, salpique canela e deixe por 5 minutos na airfryer.'
+        },
+        { 
+          id: 6, 
+          horarioId: 3, 
+          opcao: 'Opção 3', 
+          itens: [
+              { 
+                  tipo: 'Alimento', 
+                  descricao: 'Iogurte polpa de fruta zero açúcar/zero gordura', 
+                  unidade: '180g' 
+              },
+              { 
+                  tipo: 'Alimento', 
+                  descricao: 'Morango', 
+                  unidade: '180g' 
+              }
+          ]
+        },
+        { 
+            id: 7, 
+            horarioId: 4, 
+            opcao: 'Opção 1', 
+            itens: [
+                { 
+                    tipo: 'Alimento', 
+                    descricao: 'Peito de frango grelhado/desfiado', 
+                    unidade: '90g' 
+                },
+                { 
+                    tipo: 'Alimento', 
+                    descricao: 'Arroz', 
+                    unidade: '60g' 
+                },
+                { 
+                    tipo: 'Alimento', 
+                    descricao: 'Feijão', 
+                    unidade: '50g' 
+                },
+                { 
+                    tipo: 'Alimento', 
+                    descricao: 'Legumes cozidos/assados', 
+                    unidade: '100g' 
+                },
+                { 
+                    tipo: 'Alimento', 
+                    descricao: 'Salada crua', 
+                    unidade: 'à vontade' 
+                },
+                { 
+                    tipo: 'Alimento', 
+                    descricao: 'Abacaxi', 
+                    unidade: '80g' 
+                }
+            ],
+            observacoes: 'Temperar a salada com limão/vinagre. Usar pouco sal.'
+        },
+        { 
+            id: 8, 
+            horarioId: 5, 
+            opcao: 'Opção 1', 
+            itens: [
+                { 
+                    tipo: 'Alimento', 
+                    descricao: 'Queijo mussarela', 
+                    unidade: '25g' 
+                },
+                { 
+                    tipo: 'Alimento', 
+                    descricao: 'Pão francês', 
+                    unidade: '50g' 
+                },
+                { 
+                    tipo: 'Alimento', 
+                    descricao: 'Mamão papaia', 
+                    unidade: '100g' 
+                },
+                { 
+                    tipo: 'Bebida', 
+                    descricao: 'Café sem açúcar', 
+                    unidade: 'à vontade' 
+                }
+            ]
+        },
+        { 
+            id: 9, 
+            horarioId: 5, 
+            opcao: 'Opção 2', 
+            itens: [
+                { 
+                    tipo: 'Alimento', 
+                    descricao: 'Aveia em flocos', 
+                    unidade: '12g' 
+                },
+                { 
+                    tipo: 'Alimento', 
+                    descricao: 'Ovo', 
+                    unidade: '1 inteiro + 1 clara' 
+                },
+                { 
+                    tipo: 'Alimento', 
+                    descricao: 'Banana prata', 
+                    unidade: '90g' 
+                },
+                { 
+                    tipo: 'Alimento', 
+                    descricao: 'Canela e adoçante', 
+                    unidade: 'à gosto' 
+                },
+                { 
+                    tipo: 'Bebida', 
+                    descricao: 'Café sem açúcar', 
+                    unidade: 'à vontade' 
+                }
+            ],
+            observacoes: 'Modo de preparo: Bater todos os ingredientes com metade da banana e leve na frigideira e deixe dourar os dois lados. Amasse a outra metade da banana, misture canela e use como recheio.'
+        },
+        { 
+            id: 10, 
+            horarioId: 6, 
+            opcao: 'Opção 1', 
+            itens: [
+                { 
+                    tipo: 'Alimento', 
+                    descricao: 'Peito de frango grelhado/desfiado', 
+                    unidade: '60g' 
+                },
+                { 
+                    tipo: 'Alimento', 
+                    descricao: 'Ovo de galinha', 
+                    unidade: '1 inteiro' 
+                },
+                { 
+                    tipo: 'Alimento', 
+                    descricao: 'Queijo mussarela', 
+                    unidade: '20g' 
+                },
+                { 
+                    tipo: 'Alimento', 
+                    descricao: 'Aveia em flocos finos', 
+                    unidade: '15g' 
+                },
+                { 
+                    tipo: 'Alimento', 
+                    descricao: 'Salada crua', 
+                    unidade: 'à vontade' 
+                },
+                { 
+                    tipo: 'Alimento', 
+                    descricao: 'Legumes cozidos/assados', 
+                    unidade: '90g' 
+                }
+            ]
+        },
+        { 
+            id: 11, 
+            horarioId: 6, 
+            opcao: 'Opção 2', 
+            itens: [
+                { 
+                    tipo: 'Alimento', 
+                    descricao: 'Peito de frango grelhado/desfiado', 
+                    unidade: '80g' 
+                },
+                { 
+                    tipo: 'Alimento', 
+                    descricao: 'Rap10 Integral', 
+                    unidade: '1 unidade' 
+                },
+                { 
+                    tipo: 'Alimento', 
+                    descricao: 'Salada crua', 
+                    unidade: 'à vontade' 
+                },
+                { 
+                    tipo: 'Alimento', 
+                    descricao: 'Legumes cozidos', 
+                    unidade: '90g' 
+                }
+            ]
+        },
+
+        { 
+            id: 12, 
+            horarioId: 6, 
+            opcao: 'Opção 3', 
+            itens: [
+                { 
+                    tipo: 'Alimento', 
+                    descricao: 'Peito de frango grelhado/desfiado', 
+                    unidade: '80g' 
+                },
+                { 
+                    tipo: 'Alimento', 
+                    descricao: 'Batata inglesa', 
+                    unidade: '120g' 
+                },
+                { 
+                    tipo: 'Alimento', 
+                    descricao: 'Salada crua', 
+                    unidade: 'à vontade' 
+                },
+                { 
+                    tipo: 'Alimento', 
+                    descricao: 'Legumes cozidos/assados', 
+                    unidade: '100g' 
+                }
+            ]
+        }
+
+
+
+
+
+
+        ],
+        horarioSelecionado: null,
+        opcoesPratosFiltradas: [],
+        pratoSelecionado: null,
+        etapa: 'horarios', // Inicia na etapa de seleção de horários
+        termoPesquisa: '', // Termo de pesquisa do usuário
+        pratosEncontrados: [] // Pratos encontrados na pesquisa
+      },
+      computed: {
+        tiposPratos() {
+          // Obtém todos os tipos únicos de pratos
+          if (this.pratoSelecionado) {
+            return this.pratoSelecionado.itens.map(item => item.tipo);
+          }
+          return [];
+        },
+        itensAgrupados() {
+          // Inicializa um objeto vazio para armazenar os itens agrupados por tipo
+          const itensPorTipo = {};
+          
+          // Itera sobre os itens do prato selecionado
+          this.pratoSelecionado.itens.forEach(item => {
+            // Se o tipo do item não existir no objeto, cria um array vazio para esse tipo
+            if (!itensPorTipo[item.tipo]) {
+              itensPorTipo[item.tipo] = [];
+            }
+            // Adiciona o item ao array correspondente ao seu tipo
+            itensPorTipo[item.tipo].push(item);
+          });
+          
+          return itensPorTipo;
+        }
+      },
+      methods: {
+        selecionarHorario(horario) {
+          // Filtra os pratos pelas opções de pratos do horário selecionado
+          this.opcoesPratosFiltradas = this.pratos.filter(prato => prato.horarioId === horario.id);
+          this.horarioSelecionado = horario;
+          this.pratoSelecionado = null;
+          // Avança para a etapa de seleção de opções de pratos
+          this.etapa = 'opcoesPratos';
+        },
+        selecionarOpcao(opcao) {
+          // Define o prato selecionado
+          this.pratoSelecionado = opcao;
+          // Avança para a etapa de detalhes do prato selecionado
+          this.etapa = 'detalhesPrato';
+        },
+        buscarPratoPorId(id) {
+          return this.pratos.find(prato => prato.id === id);
+        },
+        buscarHorarioPorId(id) {
+          return this.horarios.find(horario => horario.id === id);
+        },
+        selecionarPrato(pratoPesquisa) {
+          let prato = this.buscarPratoPorId(pratoPesquisa.id);
+          let horario = this.buscarHorarioPorId(prato.horarioId);
+          this.horarioSelecionado = horario;
+          this.selecionarOpcao(prato);
+        },
+        voltarEtapa() {
+          // Retrocede uma etapa
+          if (this.etapa === 'opcoesPratos') {
+            // Se estiver na etapa de seleção de opções de pratos, volta para a seleção de horário
+            this.etapa = 'horarios';
+          } else if (this.etapa === 'detalhesPrato') {
+            // Se estiver na etapa de detalhes do prato, volta para a seleção de opções de pratos
+            this.etapa = 'opcoesPratos';
+          } else if (this.etapa === 'resultadoPesquisa') {
+            // Se estiver na etapa de resultado da pesquisa, volta para a seleção de horário
+            this.etapa = 'horarios';
+          }
+        },
+        buscarPratosPorItem() {
+          // Reseta a lista de pratos encontrados
+          this.pratosEncontrados = [];
+
+          if (this.termoPesquisa.trim() !== '') {
+            // Filtra os pratos com base no termo de pesquisa
+            const termo = this.termoPesquisa.toLowerCase();
+            this.pratos.forEach(prato => {
+              const itensEncontrados = prato.itens.filter(item => item.descricao.toLowerCase().includes(termo));
+              if (itensEncontrados.length > 0) {
+                const horario = this.horarios.find(horario => horario.id === prato.horarioId);
+                const pratoEncontrado = this.pratosEncontrados.find(item => item.horario.id === horario.id && item.opcao === prato.opcao);
+                if (pratoEncontrado) {
+                  pratoEncontrado.itensEncontrados.push(...itensEncontrados);
+                } else {
+                  this.pratosEncontrados.push({
+                    id: prato.id,
+                    horario: horario,
+                    opcao: prato.opcao,
+                    itensEncontrados: itensEncontrados
+                  });
+                }
+              }
+            });
+            // Avança para a etapa de resultado da pesquisa
+            this.etapa = 'resultadoPesquisa';
+          }
+        },
+        highlightSearchTerm(descricao) {
+          // Verifica se há um termo de pesquisa
+          if (this.termoPesquisa.trim() === '') {
+            return descricao; // Se não houver termo de pesquisa, retorna a descrição original
+          }
+
+          // Cria uma expressão regular global e insensível a maiúsculas/minúsculas com o termo de pesquisa
+          const regex = new RegExp(this.termoPesquisa.trim(), 'gi');
+
+          // Substitui todas as ocorrências do termo de pesquisa na descrição pelo mesmo termo envolvido em uma tag <span> com uma classe de destaque
+          return descricao.replace(regex, '<span class="bg-yellow-200">$&</span>');
+        }
+      }
+    });
+  </script>
+</body>
+</html>
