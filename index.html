@@ -80,10 +80,38 @@
       <h2 class="text-xl font-semibold">{{ horarioSelecionado.descricao }} - {{ pratoSelecionado.opcao }}</h2>
       <div v-for="(itens, tipo) in itensAgrupados" :key="tipo" class="mb-4">
         <h3 class="text-lg font-semibold mt-2">{{ tipo }}</h3>
-        <ul class="text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white">
-          <li v-for="(item, index) in itens" :key="index" class="w-full px-4 py-2 border-b border-gray-200 dark:border-gray-600 flex justify-between items-center">
-            <div>{{ item.descricao }}</div>
-            <div class="ml-auto max-w-50-percent">{{ item.unidade }}</div>
+        <ul class="text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-lg">
+          <li
+            v-for="(item, index) in itens"
+            :key="`det-${tipo}-${index}`"
+            class="w-full px-4 py-2 border-b border-gray-200"
+          >
+            <div class="flex items-start justify-between">
+              <div>
+                <div>{{ item.descricao }}</div>
+                <!-- Botão de substitutos (aparece apenas se existir mapeamento) -->
+                <button
+                  v-if="hasSubstitutos(item)"
+                  @click="toggleSubstitutos(index, tipo)"
+                  class="mt-1 text-xs text-purple-700 hover:text-purple-900 underline"
+                >
+                  {{ isSubstitutosAberto(index, tipo) ? 'Ocultar substitutos' : 'Ver substitutos' }}
+                </button>
+
+                <!-- Lista de substitutos -->
+                <div v-if="isSubstitutosAberto(index, tipo)" class="mt-2 pl-3 border-l-2 border-purple-300">
+                  <div class="text-xs text-gray-600 mb-1">Substituições sugeridas:</div>
+                  <ul class="space-y-1">
+                    <li v-for="(sub, si) in getSubstitutos(item)" :key="`sub-${si}`" class="flex items-start justify-between">
+                      <span>{{ sub.descricao }}</span>
+                      <span class="ml-4 text-right">{{ sub.unidade }}</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="ml-4 max-w-50-percent text-right">{{ item.unidade }}</div>
+            </div>
           </li>
         </ul>
       </div>
@@ -107,8 +135,8 @@
         pratos: [
           { 
             id: 1, 
-            horarioId: 1, 
-            opcao: 'Opção 1', 
+            horarioId: 1, // Começar o dia/
+            opcao: 'Opção 1 - Lilian Kely', 
             itens: [
               { tipo: 'Bebida', descricao: 'Limão', unidade: '1 unidade espremida' },
               { tipo: 'Bebida', descricao: 'Cúrcuma em pó', unidade: '1 pitada' },
@@ -119,331 +147,574 @@
           },
           { 
             id: 2, 
-            horarioId: 2, 
-            opcao: 'Opção 1',
+            horarioId: 2, // Café da manhã
+            opcao: 'Opção 1 - Lilian Kely',
             observacoes: 'Escolher uma das bebidas apenas.',
             itens: [
-              { 
-                tipo: 'Alimento', 
-                descricao: 'Ovo mexido/cozido', 
-                unidade: '1 inteiro + 1 clara' 
-              },
-              { 
-                tipo: 'Alimento', 
-                descricao: 'Pão integral', 
-                unidade: '1 fatia e meia' 
-              },
-              { 
-                tipo: 'Bebida', 
-                descricao: 'Suco verde', 
-                unidade: '1 folha de couve + 1 fatia de abacaxi + rodela de gengibre + hortelã fresca + pepino + água' 
-              },
-              { 
-                tipo: 'Bebida', 
-                descricao: 'Suco de melancia', 
-                unidade: 'Melancia 200g + 10 folhas de salsa + água' 
-              },
-              { 
-                tipo: 'Bebida', 
-                descricao: 'Suco de maçã', 
-                unidade: 'água de coco 250ml + 1/2 maçã verde ou vermelha + rodela de gengibre + pepino + hortelã' 
-              }
+              { tipo: 'Alimento', descricao: 'Ovo mexido/cozido', unidade: '1 inteiro + 1 clara' },
+              { tipo: 'Alimento', descricao: 'Pão integral', unidade: '1 fatia e meia' },
+              { tipo: 'Bebida', descricao: 'Suco verde', unidade: '1 folha de couve + 1 fatia de abacaxi + rodela de gengibre + hortelã fresca + pepino + água' },
+              { tipo: 'Bebida', descricao: 'Suco de melancia', unidade: 'Melancia 200g + 10 folhas de salsa + água' },
+              { tipo: 'Bebida', descricao: 'Suco de maçã', unidade: 'água de coco 250ml + 1/2 maçã verde ou vermelha + rodela de gengibre + pepino + hortelã' }
             ]
           },
           { 
             id: 3, 
-            horarioId: 2, 
-            opcao: 'Opção 2', 
+            horarioId: 2, // Café da manhã
+            opcao: 'Opção 2 - Lilian Kely', 
             observacoes: 'Modo de preparo: Bata o ovo com a tapioca, leve na frigideira e deixe dourar os dois lados. Recheie com queijo e orégano.',
             itens: [
-              { 
-                tipo: 'Alimento', 
-                descricao: 'Goma de tapioca', 
-                unidade: '20g' 
-              },
-              { 
-                tipo: 'Alimento', 
-                descricao: 'Ovo', 
-                unidade: '1 inteiro' 
-              },
-              { 
-                tipo: 'Alimento', 
-                descricao: 'Queijo mussarela', 
-                unidade: '20g' 
-              },
-              { 
-                tipo: 'Alimento', 
-                descricao: 'Mamão', 
-                unidade: '100g' 
-              },
-              { 
-                tipo: 'Bebida', 
-                descricao: 'Café sem açúcar', 
-                unidade: 'à vontade' 
-              }
+              { tipo: 'Alimento', descricao: 'Goma de tapioca', unidade: '20g' },
+              { tipo: 'Alimento', descricao: 'Ovo', unidade: '1 inteiro' },
+              { tipo: 'Alimento', descricao: 'Queijo mussarela', unidade: '20g' },
+              { tipo: 'Alimento', descricao: 'Mamão', unidade: '100g' },
+              { tipo: 'Bebida', descricao: 'Café sem açúcar', unidade: 'à vontade' }
+            ]
+          },
+          {
+            id: 13,
+            horarioId: 2, // Café da manhã
+            opcao: 'Opção 3 - DefinaSlim', 
+            itens: [
+              { tipo: 'Alimento', descricao: 'Pão integral', unidade: '1 fatia' },
+              { tipo: 'Alimento', descricao: 'Frango desfiado ou atum', unidade: '50g' },
+              { tipo: 'Alimento', descricao: 'Creme de ricota light', unidade: '10g' },
+              { tipo: 'Alimento', descricao: 'Frutas (exceto banana)', unidade: '100g' }
+            ]
+          },
+          {
+            id: 14,
+            horarioId: 2, // Café da manhã
+            opcao: 'Opção 4 - DefinaSlim', 
+            itens: [
+              { tipo: 'Alimento', descricao: 'Iogurte natural desnatado', unidade: '1 unidade' },
+              { tipo: 'Alimento', descricao: 'Whey protein', unidade: '1 scoop' },
+              { tipo: 'Alimento', descricao: 'Frutas (exceto banana)', unidade: '100g' }
             ]
           },
           {
             id: 4, 
-            horarioId: 3, 
-            opcao: 'Opção 1', 
+            horarioId: 3, // Lanche da manhã 
+            opcao: 'Opção 1 - Lilian Kely', 
             itens: [
-                { 
-                  tipo: 'Alimento', 
-                  descricao: 'Leite de vaca desnatado', 
-                  unidade: '170ml' 
-                },
-                { 
-                  tipo: 'Alimento', 
-                  descricao: 'Morango', 
-                  unidade: '180g' 
-                }
+                { tipo: 'Alimento', descricao: 'Leite de vaca desnatado', unidade: '170ml' },
+                { tipo: 'Alimento', descricao: 'Morango', unidade: '180g' }
             ],
             observacoes: 'Modo de preparo: Bater todos os ingredientes com bastante gelo por 2 minutos.'
           },
           { 
             id: 5, 
-            horarioId: 3, 
-            opcao: 'Opção 2', 
+            horarioId: 3, // Lanche da manhã 
+            opcao: 'Opção 2 - Lilian Kely', 
             itens: [
-                { 
-                    tipo: 'Alimento', 
-                    descricao: 'Chá (digestivo ou diurético)', 
-                    unidade: '30g' 
-                },
-                { 
-                    tipo: 'Alimento', 
-                    descricao: 'Banana prata', 
-                    unidade: '1 fatia' 
-                },
-                { 
-                    tipo: 'Alimento', 
-                    descricao: 'Queijo mussarela', 
-                    unidade: '15g' 
-                }
+                { tipo: 'Alimento', descricao: 'Chá (digestivo ou diurético)', unidade: '30g' },
+                { tipo: 'Alimento', descricao: 'Banana prata', unidade: '1 fatia' },
+                { tipo: 'Alimento', descricao: 'Queijo mussarela', unidade: '15g' }
             ],
             observacoes: 'Modo de preparo: Coloque o queijo e a banana por cima do pão, salpique canela e deixe por 5 minutos na airfryer.'
-        },
-        { 
-          id: 6, 
-          horarioId: 3, 
-          opcao: 'Opção 3', 
-          itens: [
-              { 
-                  tipo: 'Alimento', 
-                  descricao: 'Iogurte polpa de fruta zero açúcar/zero gordura', 
-                  unidade: '180g' 
-              },
-              { 
-                  tipo: 'Alimento', 
-                  descricao: 'Morango', 
-                  unidade: '180g' 
-              }
-          ]
-        },
-        { 
-            id: 7, 
-            horarioId: 4, 
-            opcao: 'Opção 1', 
+          },
+          { 
+            id: 6, 
+            horarioId: 3, // Lanche da manhã 
+            opcao: 'Opção 3 - Lilian Kely', 
             itens: [
-                { 
-                    tipo: 'Alimento', 
-                    descricao: 'Peito de frango grelhado/desfiado', 
-                    unidade: '90g' 
-                },
-                { 
-                    tipo: 'Alimento', 
-                    descricao: 'Arroz', 
-                    unidade: '60g' 
-                },
-                { 
-                    tipo: 'Alimento', 
-                    descricao: 'Feijão', 
-                    unidade: '50g' 
-                },
-                { 
-                    tipo: 'Alimento', 
-                    descricao: 'Legumes cozidos/assados', 
-                    unidade: '100g' 
-                },
-                { 
-                    tipo: 'Alimento', 
-                    descricao: 'Salada crua', 
-                    unidade: 'à vontade' 
-                },
-                { 
-                    tipo: 'Alimento', 
-                    descricao: 'Abacaxi', 
-                    unidade: '80g' 
-                }
-            ],
-            observacoes: 'Temperar a salada com limão/vinagre. Usar pouco sal.'
-        },
-        { 
-            id: 8, 
-            horarioId: 5, 
-            opcao: 'Opção 1', 
-            itens: [
-                { 
-                    tipo: 'Alimento', 
-                    descricao: 'Queijo mussarela', 
-                    unidade: '25g' 
-                },
-                { 
-                    tipo: 'Alimento', 
-                    descricao: 'Pão francês', 
-                    unidade: '50g' 
-                },
-                { 
-                    tipo: 'Alimento', 
-                    descricao: 'Mamão papaia', 
-                    unidade: '100g' 
-                },
-                { 
-                    tipo: 'Bebida', 
-                    descricao: 'Café sem açúcar', 
-                    unidade: 'à vontade' 
-                }
+                { tipo: 'Alimento', descricao: 'Iogurte polpa de fruta zero açúcar/zero gordura', unidade: '180g' },
+                { tipo: 'Alimento', descricao: 'Morango', unidade: '180g' }
             ]
-        },
-        { 
-            id: 9, 
-            horarioId: 5, 
-            opcao: 'Opção 2', 
+          },
+          {
+            id: 15, 
+            horarioId: 3, // Lanche da manhã 
+            opcao: 'Opção 4 - DefinaSlim', 
             itens: [
-                { 
-                    tipo: 'Alimento', 
-                    descricao: 'Aveia em flocos', 
-                    unidade: '12g' 
-                },
-                { 
-                    tipo: 'Alimento', 
-                    descricao: 'Ovo', 
-                    unidade: '1 inteiro + 1 clara' 
-                },
-                { 
-                    tipo: 'Alimento', 
-                    descricao: 'Banana prata', 
-                    unidade: '90g' 
-                },
-                { 
-                    tipo: 'Alimento', 
-                    descricao: 'Canela e adoçante', 
-                    unidade: 'à gosto' 
-                },
-                { 
-                    tipo: 'Bebida', 
-                    descricao: 'Café sem açúcar', 
-                    unidade: 'à vontade' 
-                }
-            ],
-            observacoes: 'Modo de preparo: Bater todos os ingredientes com metade da banana e leve na frigideira e deixe dourar os dois lados. Amasse a outra metade da banana, misture canela e use como recheio.'
-        },
-        { 
-            id: 10, 
-            horarioId: 6, 
-            opcao: 'Opção 1', 
-            itens: [
-                { 
-                    tipo: 'Alimento', 
-                    descricao: 'Peito de frango grelhado/desfiado', 
-                    unidade: '60g' 
-                },
-                { 
-                    tipo: 'Alimento', 
-                    descricao: 'Ovo de galinha', 
-                    unidade: '1 inteiro' 
-                },
-                { 
-                    tipo: 'Alimento', 
-                    descricao: 'Queijo mussarela', 
-                    unidade: '20g' 
-                },
-                { 
-                    tipo: 'Alimento', 
-                    descricao: 'Aveia em flocos finos', 
-                    unidade: '15g' 
-                },
-                { 
-                    tipo: 'Alimento', 
-                    descricao: 'Salada crua', 
-                    unidade: 'à vontade' 
-                },
-                { 
-                    tipo: 'Alimento', 
-                    descricao: 'Legumes cozidos/assados', 
-                    unidade: '90g' 
-                }
+              { tipo: 'Alimento', descricao: 'Salada de frutas', unidade: '150g' }
             ]
-        },
-        { 
-            id: 11, 
-            horarioId: 6, 
-            opcao: 'Opção 2', 
+          },
+          {
+            id: 16,
+            horarioId: 3, // Lanche da manhã 
+            opcao: 'Opção 5 - DefinaSlim', 
             itens: [
-                { 
-                    tipo: 'Alimento', 
-                    descricao: 'Peito de frango grelhado/desfiado', 
-                    unidade: '80g' 
-                },
-                { 
-                    tipo: 'Alimento', 
-                    descricao: 'Rap10 Integral', 
-                    unidade: '1 unidade' 
-                },
-                { 
-                    tipo: 'Alimento', 
-                    descricao: 'Salada crua', 
-                    unidade: 'à vontade' 
-                },
-                { 
-                    tipo: 'Alimento', 
-                    descricao: 'Legumes cozidos', 
-                    unidade: '90g' 
-                }
+              { tipo: 'Bebida', descricao: 'Yopro completo', unidade: '1 unidade' }
             ]
-        },
+          },
+          { 
+              id: 7,
+              horarioId: 4, // Almoço
+              opcao: 'Opção 1 - Lilian Kely', 
+              itens: [
+                  { tipo: 'Alimento', descricao: 'Peito de frango grelhado/desfiado', unidade: '90g' },
+                  { tipo: 'Alimento', descricao: 'Arroz', unidade: '60g' },
+                  { tipo: 'Alimento', descricao: 'Feijão', unidade: '50g' },
+                  { tipo: 'Alimento', descricao: 'Legumes cozidos/assados', unidade: '100g' },
+                  { tipo: 'Alimento', descricao: 'Salada crua', unidade: 'à vontade' },
+                  { tipo: 'Alimento', descricao: 'Abacaxi', unidade: '80g' }
+              ],
+              observacoes: 'Temperar a salada com limão/vinagre. Usar pouco sal.'
+          },
+          { 
+              id: 16, 
+              horarioId: 4, // Almoço
+              opcao: 'Opção 2 - DefinaSlim', 
+              itens: [
+                  { tipo: 'Alimento', descricao: 'Carne magra', unidade: '120g' },
+                  { tipo: 'Alimento', descricao: 'Carboidratos', unidade: '50g' },
+                  { tipo: 'Alimento', descricao: 'Leguminosas', unidade: '50g' },
+                  { tipo: 'Alimento', descricao: 'Legumes', unidade: '150g' },
+                  { tipo: 'Alimento', descricao: 'Fruta (exceto banana)', unidade: '1 unidade' }
+              ]
+          },
+          { 
+              id: 8, 
+              horarioId: 5, // Lanche da tarde
+              opcao: 'Opção 1 - Lilian Kely', 
+              itens: [
+                  { tipo: 'Alimento', descricao: 'Queijo mussarela', unidade: '25g' },
+                  { tipo: 'Alimento', descricao: 'Pão francês', unidade: '50g' },
+                  { tipo: 'Alimento', descricao: 'Mamão papaia', unidade: '100g' },
+                  { tipo: 'Bebida', descricao: 'Café sem açúcar', unidade: 'à vontade' }
+              ]
+          },
+          { 
+              id: 9, 
+              horarioId: 5, // Lanche da tarde
+              opcao: 'Opção 2 - Lilian Kely', 
+              itens: [
+                  { tipo: 'Alimento', descricao: 'Aveia em flocos', unidade: '12g' },
+                  { tipo: 'Alimento', descricao: 'Ovo', unidade: '1 inteiro + 1 clara' },
+                  { tipo: 'Alimento', descricao: 'Banana prata', unidade: '90g' },
+                  { tipo: 'Alimento', descricao: 'Canela e adoçante', unidade: 'à gosto' },
+                  { tipo: 'Bebida', descricao: 'Café sem açúcar', unidade: 'à vontade' }
+              ],
+              observacoes: 'Modo de preparo: Bater todos os ingredientes com metade da banana e leve na frigideira e deixe dourar os dois lados. Amasse a outra metade da banana, misture canela e use como recheio.'
+          },
+          { 
+              id: 17,
+              horarioId: 5, // Lanche da tarde
+              opcao: 'Opção 3 - DefinaSlim', 
+              itens: [
+                  { tipo: 'Alimento', descricao: 'Iogurte natural desnatado', unidade: '1 unidade' },
+                  { tipo: 'Alimento', descricao: 'Whey protein', unidade: '1 scoop' },
+                  { tipo: 'Alimento', descricao: 'Frutas (exceto banana)', unidade: '100g' }
+              ],
+          },
+          { 
+              id: 18,
+              horarioId: 5, // Lanche da tarde
+              opcao: 'Opção 4 - DefinaSlim', 
+              itens: [
+                  { tipo: 'Alimento', descricao: 'Pão integral', unidade: '1 fatia' },
+                  { tipo: 'Alimento', descricao: 'Frango desfiado ou atum', unidade: '50g' },
+                  { tipo: 'Alimento', descricao: 'Creme de ricota light', unidade: '10g' },
+                  { tipo: 'Alimento', descricao: 'Frutas (exceto banana)', unidade: '100g' }
+              ],
+          },
+          { 
+              id: 10, 
+              horarioId: 6, // Jantar
+              opcao: 'Opção 1 - Lilian Kely', 
+              itens: [
+                  { tipo: 'Alimento', descricao: 'Peito de frango grelhado/desfiado', unidade: '60g' },
+                  { tipo: 'Alimento', descricao: 'Ovo de galinha', unidade: '1 inteiro' },
+                  { tipo: 'Alimento', descricao: 'Queijo mussarela', unidade: '20g' },
+                  { tipo: 'Alimento', descricao: 'Aveia em flocos finos', unidade: '15g' },
+                  { tipo: 'Alimento', descricao: 'Salada crua', unidade: 'à vontade' },
+                  { tipo: 'Alimento', descricao: 'Legumes cozidos/assados', unidade: '90g' }
+              ]
+          },
+          { 
+              id: 11, 
+              horarioId: 6, // Jantar
+              opcao: 'Opção 2 - Lilian Kely', 
+              itens: [
+                  { tipo: 'Alimento', descricao: 'Peito de frango grelhado/desfiado', unidade: '80g' },
+                  { tipo: 'Alimento', descricao: 'Rap10 Integral', unidade: '1 unidade' },
+                  { tipo: 'Alimento', descricao: 'Salada crua', unidade: 'à vontade' },
+                  { tipo: 'Alimento', descricao: 'Legumes cozidos', unidade: '90g' }
+              ]
+          },
 
-        { 
+          { 
             id: 12, 
-            horarioId: 6, 
-            opcao: 'Opção 3', 
+            horarioId: 6,  // Jantar
+            opcao: 'Opção 3 - Lilian Kely', 
             itens: [
-                { 
-                    tipo: 'Alimento', 
-                    descricao: 'Peito de frango grelhado/desfiado', 
-                    unidade: '80g' 
-                },
-                { 
-                    tipo: 'Alimento', 
-                    descricao: 'Batata inglesa', 
-                    unidade: '120g' 
-                },
-                { 
-                    tipo: 'Alimento', 
-                    descricao: 'Salada crua', 
-                    unidade: 'à vontade' 
-                },
-                { 
-                    tipo: 'Alimento', 
-                    descricao: 'Legumes cozidos/assados', 
-                    unidade: '100g' 
-                }
+                { tipo: 'Alimento', descricao: 'Peito de frango grelhado/desfiado', unidade: '80g' },
+                { tipo: 'Alimento', descricao: 'Batata inglesa', unidade: '120g' },
+                { tipo: 'Alimento', descricao: 'Salada crua', unidade: 'à vontade' },
+                { tipo: 'Alimento', descricao: 'Legumes cozidos/assados', unidade: '100g' }
             ]
-        }
+          },
 
-
-
-
-
+          { 
+            id: 19,
+            horarioId: 6, // Jantar
+            opcao: 'Opção 4 - DefinaSlim', 
+            itens: [
+                { tipo: 'Alimento', descricao: 'Carne magra', unidade: '120g' },
+                { tipo: 'Alimento', descricao: 'Carboidrato', unidade: '50g' },
+                { tipo: 'Alimento', descricao: 'Legumes', unidade: '150g' },
+                { tipo: 'Alimento', descricao: 'Fruta (exceto banana)', unidade: '1 unidade' }
+            ]
+          },
+          { 
+            id: 20,
+            horarioId: 6, // Jantar
+            opcao: 'Opção 5 - DefinaSlim', 
+            itens: [
+                { tipo: 'Alimento', descricao: 'Carne magra', unidade: '100g' },
+                { tipo: 'Alimento', descricao: 'Pão integral', unidade: '2 fatias' },
+                { tipo: 'Alimento', descricao: 'Salada de alface, tomate e cebola', unidade: 'à vontade' },
+                { tipo: 'Alimento', descricao: 'Fruta (exceto banana)', unidade: '1 unidade' }
+            ]
+          },
 
         ],
+        // --- NOVO: mapeamento de substitutos por prato e ingrediente ---
+        // chave: `${pratoId}::${descricaoNormalizada}`
+        substitutos: {
+          // Café da manhã - Opção 1
+          '2::pao integral': [
+            { descricao: 'Cuscuz cozido', unidade: '80g' },
+            { descricao: 'Batata doce', unidade: '110g' },
+            { descricao: 'Aipim', unidade: '80g' },
+            { descricao: 'Banana da terra', unidade: '80g' }
+          ],
+          '2::ovo mexido/cozido': [
+            { descricao: 'Creme de ricota light', unidade: '40g' },
+            { descricao: 'Queijo minas frescal', unidade: '30g' },
+            { descricao: 'Frango', unidade: '40g' },
+            { descricao: 'Atum sólido', unidade: '50g' },
+            { descricao: 'Carne bovina magra', unidade: '30g' },
+            { descricao: 'Queijo ricota', unidade: '50g' }
+          ],
+
+          // Café da manhã - Opção 2
+          '3::mamao': [
+            { descricao: 'Maçã', unidade: '80g' },
+            { descricao: 'Pêra', unidade: '85g' },
+            { descricao: 'Melão', unidade: '140g' },
+            { descricao: 'Kiwi', unidade: '80g' },
+            { descricao: 'Tangerina', unidade: '110g' },
+            { descricao: 'Morango', unidade: '130g' },
+            { descricao: 'Abacaxi', unidade: '80g' },
+            { descricao: 'Melancia', unidade: '130g' },
+            { descricao: 'Banana prata', unidade: '40g' }
+          ],
+
+          // Café da manhã - Opção 3 - DefinaSlim
+          '13::frutas (exceto banana)': [
+            { descricao: 'Abacate', unidade: '50g' },
+            { descricao: 'Abacaxi', unidade: '100g' },
+            { descricao: 'Goiaba', unidade: '100g' },
+            { descricao: 'Jaca', unidade: '100g' },
+            { descricao: 'Kiwi', unidade: '100g' },
+            { descricao: 'Laranja', unidade: '100g' },
+            { descricao: 'Maçã', unidade: '100g' },
+            { descricao: 'Mamão', unidade: '100g' },
+            { descricao: 'Manga', unidade: '100g' },
+            { descricao: 'Melancia', unidade: '100g' },
+            { descricao: 'Melão', unidade: '100g' },
+            { descricao: 'Morango', unidade: '100g' },
+            { descricao: 'Pêra', unidade: '100g' },
+            { descricao: 'Pêssego', unidade: '50g' },
+            { descricao: 'Uva', unidade: '100g' },
+          ],
+
+          // Café da manhã - Opção 4 - DefinaSlim
+          '14::frutas (exceto banana)': [
+            { descricao: 'Abacate', unidade: '50g' },
+            { descricao: 'Abacaxi', unidade: '100g' },
+            { descricao: 'Goiaba', unidade: '100g' },
+            { descricao: 'Jaca', unidade: '100g' },
+            { descricao: 'Kiwi', unidade: '100g' },
+            { descricao: 'Laranja', unidade: '100g' },
+            { descricao: 'Maçã', unidade: '100g' },
+            { descricao: 'Mamão', unidade: '100g' },
+            { descricao: 'Manga', unidade: '100g' },
+            { descricao: 'Melancia', unidade: '100g' },
+            { descricao: 'Melão', unidade: '100g' },
+            { descricao: 'Morango', unidade: '100g' },
+            { descricao: 'Pêra', unidade: '100g' },
+            { descricao: 'Pêssego', unidade: '50g' },
+            { descricao: 'Uva', unidade: '100g' },
+          ],
+
+          // Almoço - Opção 1
+          '7::peito de frango grelhado/desfiado': [
+            { descricao: 'Carne bovina magra', unidade: '80g' },
+            { descricao: 'Sobrecoxa de frango sem pele', unidade: '80g' },
+            { descricao: 'Paleta de porco sem gordura', unidade: '70g' },
+            { descricao: 'Fígado bovino', unidade: '70g' }
+          ],
+          '7::arroz': [
+            { descricao: 'Batata doce', unidade: '90g' },
+            { descricao: 'Aipim', unidade: '60g' },
+            { descricao: 'Macarrão', unidade: '50g' },
+            { descricao: 'Batata inglesa', unidade: '130g' }
+          ],
+          '7::abacaxi': [
+            { descricao: 'Laranja', unidade: '90g' },
+            { descricao: 'Tangerina', unidade: '100g' }
+          ],
+
+          // Lanche da tarde - Opção 1
+          '8::queijo mussarela': [
+            { descricao: 'Creme de ricota light', unidade: '30g' },
+            { descricao: 'Queijo minas frescal', unidade: '27g' },
+            { descricao: 'Queijo ricota', unidade: '40g' },
+            { descricao: 'Ovo inteiro', unidade: '1 unidade' },
+            { descricao: 'Frango', unidade: '40g' },
+            { descricao: 'Atum', unidade: '60g' }
+          ],
+          '8::pao frances': [
+            { descricao: 'Cuscuz cozido', unidade: '120g' },
+            { descricao: 'Batata doce', unidade: '180g' },
+            { descricao: 'Aipim', unidade: '120g' },
+            { descricao: 'Goma de tapioca', unidade: '40g' },
+            { descricao: 'Pão integral', unidade: '50g' },
+            { descricao: 'Banana da terra', unidade: '120g' }
+          ],
+          '8::mamao papaia': [
+            { descricao: 'Maçã', unidade: '80g' },
+            { descricao: 'Pêra', unidade: '85g' },
+            { descricao: 'Melão', unidade: '140g' },
+            { descricao: 'Kiwi', unidade: '80g' },
+            { descricao: 'Tangerina', unidade: '110g' },
+            { descricao: 'Morango', unidade: '130g' },
+            { descricao: 'Abacaxi', unidade: '80g' },
+            { descricao: 'Melancia', unidade: '130g' },
+            { descricao: 'Banana prata', unidade: '40g' }
+          ],
+
+          // Jantar - Opção 1
+          '10::peito de frango grelhado/desfiado': [
+            { descricao: 'Carne bovina magra', unidade: '50g' },
+            { descricao: 'Atum ao natural', unidade: '90g' }
+          ],
+
+          // Jantar - Opção 2
+          '11::peito de frango grelhado/desfiado': [
+            { descricao: 'Carne bovina magra', unidade: '70g' },
+            { descricao: 'Atum ao natural', unidade: '110g' }
+          ],
+
+          // Jantar - Opção 3
+          '12::peito de frango grelhado/desfiado': [
+            { descricao: 'Carne bovina magra', unidade: '70g' },
+            { descricao: 'Sobrecoxa de frango sem pele', unidade: '70g' },
+            { descricao: 'Paleta de porco sem gordura', unidade: '60g' },
+            { descricao: 'Fígado bovino', unidade: '60g' }
+          ],
+          '12::batata inglesa': [
+            { descricao: 'Batata doce', unidade: '60g' },
+            { descricao: 'Aipim', unidade: '50g' },
+            { descricao: 'Macarrão', unidade: '40g' },
+            { descricao: 'Arroz branco', unidade: '50g' }
+          ],
+
+          // Lanche da manhã - Opção 1
+          '4::morango': [
+            { descricao: 'Maçã Fuji', unidade: '90g' },
+            { descricao: 'Kiwi', unidade: '100g' },
+            { descricao: 'Uva Itália', unidade: '100g' },
+            { descricao: 'Mamão', unidade: '120g' },
+            { descricao: 'Banana prata', unidade: '60g' },
+            { descricao: 'Melão', unidade: '180g' },
+            { descricao: 'Pêra', unidade: '80g' },
+          ],
+
+          // Lanche da manhã - Opção 3
+          '6::morango': [
+            { descricao: 'Banana prata', unidade: '60g' },
+            { descricao: 'Melão', unidade: '180g' },
+            { descricao: 'Pêra', unidade: '80g' },
+            { descricao: 'Maçã Fuji', unidade: '90g' },
+            { descricao: 'Kiwi', unidade: '100g' },
+            { descricao: 'Uva Itália', unidade: '100g' },
+            { descricao: 'Mamão', unidade: '120g' }
+          ],
+
+          // Jantar - Opção 4 - DefinaSlim
+          '19::carne magra': [
+            { descricao: 'Filé de frango médio', unidade: '120g' },
+            { descricao: 'Filé de lombo suíno', unidade: '120g' },
+            { descricao: 'Filé mignon suíno', unidade: '120g' },
+            { descricao: 'Filé de peixe', unidade: '120g' },
+            { descricao: 'Maminha', unidade: '120g' }
+          ],
+          '19::carboidrato': [
+            { descricao: 'Mandioquinha', unidade: '50g' },
+            { descricao: 'Batata inglesa', unidade: '50g' },
+            { descricao: 'Mandioca', unidade: '50g' },
+            { descricao: 'Abóbora', unidade: '50g' },
+            { descricao: 'Inhame', unidade: '50g' },
+            { descricao: 'Batata doce', unidade: '50g' },
+            { descricao: 'Beterraba', unidade: '50g' },
+            { descricao: 'Cenoura', unidade: '50g' },
+            { descricao: 'Nabo', unidade: '50g' },
+            { descricao: 'Arroz', unidade: '50g' }
+          ],
+          '19::legumes': [
+            { descricao: 'Abobrinha', unidade: '150g' },
+            { descricao: 'Couve-flor', unidade: '150g' },
+            { descricao: 'Mostarda', unidade: '150g' },
+            { descricao: 'Pimentão', unidade: '150g' },
+            { descricao: 'Berinjela', unidade: '150g' },
+            { descricao: 'Brócolis', unidade: '150g' },
+            { descricao: 'Chuchu', unidade: '150g' },
+            { descricao: 'Quiabo', unidade: '150g' },
+            { descricao: 'Vagem', unidade: '150g' },
+            { descricao: 'Pepino', unidade: '150g' },
+          ],
+          '19::fruta (exceto banana)': [
+            { descricao: 'Abacate', unidade: '50g' },
+            { descricao: 'Abacaxi', unidade: '100g' },
+            { descricao: 'Goiaba', unidade: '100g' },
+            { descricao: 'Jaca', unidade: '100g' },
+            { descricao: 'Kiwi', unidade: '100g' },
+            { descricao: 'Laranja', unidade: '100g' },
+            { descricao: 'Maçã', unidade: '100g' },
+            { descricao: 'Mamão', unidade: '100g' },
+            { descricao: 'Manga', unidade: '100g' },
+            { descricao: 'Melancia', unidade: '100g' },
+            { descricao: 'Melão', unidade: '100g' },
+            { descricao: 'Morango', unidade: '100g' },
+            { descricao: 'Pêra', unidade: '100g' },
+            { descricao: 'Pêssego', unidade: '50g' },
+            { descricao: 'Uva', unidade: '100g' },
+          ],
+
+          // Jantar - Opção 4 - DefinaSlim
+          '16::carne magra': [
+            { descricao: 'Filé de frango médio', unidade: '120g' },
+            { descricao: 'Filé de lombo suíno', unidade: '120g' },
+            { descricao: 'Filé mignon suíno', unidade: '120g' },
+            { descricao: 'Filé de peixe', unidade: '120g' },
+            { descricao: 'Maminha', unidade: '120g' }
+          ],
+          '16::carboidratos': [
+            { descricao: 'Mandioquinha', unidade: '50g' },
+            { descricao: 'Batata inglesa', unidade: '50g' },
+            { descricao: 'Mandioca', unidade: '50g' },
+            { descricao: 'Abóbora', unidade: '50g' },
+            { descricao: 'Inhame', unidade: '50g' },
+            { descricao: 'Batata doce', unidade: '50g' },
+            { descricao: 'Beterraba', unidade: '50g' },
+            { descricao: 'Cenoura', unidade: '50g' },
+            { descricao: 'Nabo', unidade: '50g' },
+            { descricao: 'Arroz', unidade: '50g' }
+          ],
+          '16::leguminosas': [
+            { descricao: 'Feijão', unidade: '50g' },
+            { descricao: 'Ervilha', unidade: '50g' },
+            { descricao: 'Lentilha', unidade: '50g' },
+            { descricao: 'Grão de bico', unidade: '50g' },
+            { descricao: 'Soja', unidade: '50g' }
+          ],
+          '16::legumes': [
+            { descricao: 'Abobrinha', unidade: '150g' },
+            { descricao: 'Couve-flor', unidade: '150g' },
+            { descricao: 'Mostarda', unidade: '150g' },
+            { descricao: 'Pimentão', unidade: '150g' },
+            { descricao: 'Berinjela', unidade: '150g' },
+            { descricao: 'Brócolis', unidade: '150g' },
+            { descricao: 'Chuchu', unidade: '150g' },
+            { descricao: 'Quiabo', unidade: '150g' },
+            { descricao: 'Vagem', unidade: '150g' },
+            { descricao: 'Pepino', unidade: '150g' },
+          ],
+          '16::fruta (exceto banana)': [
+          { descricao: 'Abacate', unidade: '50g' },
+            { descricao: 'Abacaxi', unidade: '100g' },
+            { descricao: 'Goiaba', unidade: '100g' },
+            { descricao: 'Jaca', unidade: '100g' },
+            { descricao: 'Kiwi', unidade: '100g' },
+            { descricao: 'Laranja', unidade: '100g' },
+            { descricao: 'Maçã', unidade: '100g' },
+            { descricao: 'Mamão', unidade: '100g' },
+            { descricao: 'Manga', unidade: '100g' },
+            { descricao: 'Melancia', unidade: '100g' },
+            { descricao: 'Melão', unidade: '100g' },
+            { descricao: 'Morango', unidade: '100g' },
+            { descricao: 'Pêra', unidade: '100g' },
+            { descricao: 'Pêssego', unidade: '50g' },
+            { descricao: 'Uva', unidade: '100g' },
+          ],
+
+          // Jantar - Opção 5 - DefinaSlim
+          '20::carne magra': [
+            { descricao: 'Filé de frango médio', unidade: '100g' },
+            { descricao: 'Filé de lombo suíno', unidade: '100g' },
+            { descricao: 'Filé mignon suíno', unidade: '100g' },
+            { descricao: 'Filé de peixe', unidade: '100g' },
+            { descricao: 'Maminha', unidade: '100g' }
+          ],
+          '20::fruta (exceto banana)': [
+            { descricao: 'Abacate', unidade: '50g' },
+            { descricao: 'Abacaxi', unidade: '100g' },
+            { descricao: 'Goiaba', unidade: '100g' },
+            { descricao: 'Jaca', unidade: '100g' },
+            { descricao: 'Kiwi', unidade: '100g' },
+            { descricao: 'Laranja', unidade: '100g' },
+            { descricao: 'Maçã', unidade: '100g' },
+            { descricao: 'Mamão', unidade: '100g' },
+            { descricao: 'Manga', unidade: '100g' },
+            { descricao: 'Melancia', unidade: '100g' },
+            { descricao: 'Melão', unidade: '100g' },
+            { descricao: 'Morango', unidade: '100g' },
+            { descricao: 'Pêra', unidade: '100g' },
+            { descricao: 'Pêssego', unidade: '50g' },
+            { descricao: 'Uva', unidade: '100g' },
+          ],
+
+          // Lanche da tarde - Opção 3 - DefinaSlim
+          '17::frutas (exceto banana)': [
+            { descricao: 'Abacate', unidade: '50g' },
+            { descricao: 'Abacaxi', unidade: '100g' },
+            { descricao: 'Goiaba', unidade: '100g' },
+            { descricao: 'Jaca', unidade: '100g' },
+            { descricao: 'Kiwi', unidade: '100g' },
+            { descricao: 'Laranja', unidade: '100g' },
+            { descricao: 'Maçã', unidade: '100g' },
+            { descricao: 'Mamão', unidade: '100g' },
+            { descricao: 'Manga', unidade: '100g' },
+            { descricao: 'Melancia', unidade: '100g' },
+            { descricao: 'Melão', unidade: '100g' },
+            { descricao: 'Morango', unidade: '100g' },
+            { descricao: 'Pêra', unidade: '100g' },
+            { descricao: 'Pêssego', unidade: '50g' },
+            { descricao: 'Uva', unidade: '100g' },
+          ],
+
+          // Lanche da tarde - Opção 4 - DefinaSlim
+          '18::frutas (exceto banana)': [
+            { descricao: 'Abacate', unidade: '50g' },
+            { descricao: 'Abacaxi', unidade: '100g' },
+            { descricao: 'Goiaba', unidade: '100g' },
+            { descricao: 'Jaca', unidade: '100g' },
+            { descricao: 'Kiwi', unidade: '100g' },
+            { descricao: 'Laranja', unidade: '100g' },
+            { descricao: 'Maçã', unidade: '100g' },
+            { descricao: 'Mamão', unidade: '100g' },
+            { descricao: 'Manga', unidade: '100g' },
+            { descricao: 'Melancia', unidade: '100g' },
+            { descricao: 'Melão', unidade: '100g' },
+            { descricao: 'Morango', unidade: '100g' },
+            { descricao: 'Pêra', unidade: '100g' },
+            { descricao: 'Pêssego', unidade: '50g' },
+            { descricao: 'Uva', unidade: '100g' },
+          ],
+
+        },
+
         horarioSelecionado: null,
         opcoesPratosFiltradas: [],
         pratoSelecionado: null,
         etapa: 'horarios', // Inicia na etapa de seleção de horários
         termoPesquisa: '', // Termo de pesquisa do usuário
-        pratosEncontrados: [] // Pratos encontrados na pesquisa
+        pratosEncontrados: [], // Pratos encontrados na pesquisa
+        substitutosAbertosMap: {} // chave composta `${tipo}::${index}` => true/false
       },
       computed: {
         tiposPratos() {
@@ -471,6 +742,34 @@
         }
       },
       methods: {
+        // Normaliza texto: minuscula + remove acentos/espacos extras
+        norm(txt) {
+          return (txt || '')
+            .toString()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .trim();
+        },
+        subKey(pratoId, descricao) {
+          return `${pratoId}::${this.norm(descricao)}`;
+        },
+        hasSubstitutos(item) {
+          if (!this.pratoSelecionado) return false;
+          const key = this.subKey(this.pratoSelecionado.id, item.descricao);
+          return Array.isArray(this.substitutos[key]) && this.substitutos[key].length > 0;
+        },
+        getSubstitutos(item) {
+          const key = this.subKey(this.pratoSelecionado.id, item.descricao);
+          return this.substitutos[key] || [];
+        },
+        toggleSubstitutos(index, tipo) {
+          const k = `${tipo}::${index}`;
+          this.$set(this.substitutosAbertosMap, k, !this.substitutosAbertosMap[k]);
+        },
+        isSubstitutosAberto(index, tipo) {
+          return !!this.substitutosAbertosMap[`${tipo}::${index}`];
+        },
         selecionarHorario(horario) {
           // Filtra os pratos pelas opções de pratos do horário selecionado
           this.opcoesPratosFiltradas = this.pratos.filter(prato => prato.horarioId === horario.id);
@@ -484,6 +783,7 @@
           this.pratoSelecionado = opcao;
           // Avança para a etapa de detalhes do prato selecionado
           this.etapa = 'detalhesPrato';
+          this.substitutosAbertosMap = {};
         },
         buscarPratoPorId(id) {
           return this.pratos.find(prato => prato.id === id);
@@ -511,43 +811,27 @@
           }
         },
         buscarPratosPorItem() {
-          // Reseta a lista de pratos encontrados
           this.pratosEncontrados = [];
+          const termo = this.termoPesquisa.trim();
+          if (termo === '') return; // não pesquisar se vazio
 
-          if (this.termoPesquisa.trim() !== '') {
-            // Filtra os pratos com base no termo de pesquisa
-            const termo = this.termoPesquisa.toLowerCase();
-            this.pratos.forEach(prato => {
-              const itensEncontrados = prato.itens.filter(item => item.descricao.toLowerCase().includes(termo));
-              if (itensEncontrados.length > 0) {
-                const horario = this.horarios.find(horario => horario.id === prato.horarioId);
-                const pratoEncontrado = this.pratosEncontrados.find(item => item.horario.id === horario.id && item.opcao === prato.opcao);
-                if (pratoEncontrado) {
-                  pratoEncontrado.itensEncontrados.push(...itensEncontrados);
-                } else {
-                  this.pratosEncontrados.push({
-                    id: prato.id,
-                    horario: horario,
-                    opcao: prato.opcao,
-                    itensEncontrados: itensEncontrados
-                  });
-                }
-              }
-            });
-            // Avança para a etapa de resultado da pesquisa
-            this.etapa = 'resultadoPesquisa';
-          }
+          const termoNorm = this.norm(termo);
+          this.pratos.forEach(prato => {
+            const itensEncontrados = prato.itens.filter(item => this.norm(item.descricao).includes(termoNorm));
+            if (itensEncontrados.length > 0) {
+              const horario = this.horarios.find(h => h.id === prato.horarioId);
+              const existente = this.pratosEncontrados.find(x => x.horario.id === horario.id && x.opcao === prato.opcao);
+              if (existente) existente.itensEncontrados.push(...itensEncontrados);
+              else this.pratosEncontrados.push({ id: prato.id, horario, opcao: prato.opcao, itensEncontrados });
+            }
+          });
+          this.etapa = 'resultadoPesquisa';
         },
         highlightSearchTerm(descricao) {
-          // Verifica se há um termo de pesquisa
-          if (this.termoPesquisa.trim() === '') {
-            return descricao; // Se não houver termo de pesquisa, retorna a descrição original
-          }
-
-          // Cria uma expressão regular global e insensível a maiúsculas/minúsculas com o termo de pesquisa
-          const regex = new RegExp(this.termoPesquisa.trim(), 'gi');
-
-          // Substitui todas as ocorrências do termo de pesquisa na descrição pelo mesmo termo envolvido em uma tag <span> com uma classe de destaque
+          const termo = this.termoPesquisa.trim();
+          if (termo === '') return descricao;
+          const safe = termo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp(safe, 'gi');
           return descricao.replace(regex, '<span class="bg-yellow-200">$&</span>');
         }
       }
